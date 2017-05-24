@@ -1,4 +1,5 @@
-var/list/admin_datums = list()
+GLOBAL_LIST_EMPTY(admin_datums)
+GLOBAL_PROTECT(admin_datums)
 
 /datum/admins
 	var/rank = "Pedal"
@@ -8,6 +9,8 @@ var/list/admin_datums = list()
 
 	var/datum/marked_datum
 
+	var/spamcooldown = 0
+
 	var/admincaster_screen = 0	//TODO: remove all these 5 variables, they are completly unacceptable
 	var/datum/newscaster/feed_message/admincaster_feed_message = new /datum/newscaster/feed_message
 	var/datum/newscaster/wanted_message/admincaster_wanted_message = new /datum/newscaster/wanted_message
@@ -16,8 +19,7 @@ var/list/admin_datums = list()
 
 /datum/admins/New(R = "Pedal", new_rights = 0, ckey)
 	if(!ckey)
-		spawn(0)
-			del(src)
+		QDEL_IN(src, 0)
 		throw EXCEPTION("Admin datum created without a ckey")
 		return
 //	if(!istype(R))
@@ -28,7 +30,7 @@ var/list/admin_datums = list()
 	rank = R
 	rights = new_rights
 	admin_signature = "Nanotrasen Officer #[rand(0,9)][rand(0,9)][rand(0,9)]"
-	admin_datums[ckey] = src
+	GLOB.admin_datums[ckey] = src
 
 /datum/admins/proc/associate(client/C)
 	if(istype(C))
@@ -36,11 +38,11 @@ var/list/admin_datums = list()
 		owner.holder = src
 		owner.add_admin_verbs()	//TODO
 		owner.verbs -= /client/proc/readmin
-		admins |= C
+		GLOB.admins |= C
 
 /datum/admins/proc/disassociate()
 	if(owner)
-		admins -= owner
+		GLOB.admins -= owner
 		owner.remove_admin_verbs()
 		owner.holder = null
 		owner = null
@@ -68,7 +70,7 @@ generally it would be used like so:
 
 /proc/admin_proc()
 	if(!check_rights(R_ADMIN)) return
-	world << "you have enough rights!"
+	to_chat(world, "you have enough rights!")
 
 NOTE: it checks usr! not src! So if you're checking somebody's rank in a proc which they did not call
 you will have to do something like if(client.rights & R_ADMIN) yourself.
@@ -79,7 +81,7 @@ you will have to do something like if(client.rights & R_ADMIN) yourself.
 			return 1
 		else
 			if(show_msg)
-				usr << "<font color='red'>Error: You do not have sufficient rights to do that. You require one of the following flags:[rights2text(rights_required," ")].</font>"
+				to_chat(usr, "<font color='red'>Error: You do not have sufficient rights to do that. You require one of the following flags:[rights2text(rights_required," ")].</font>")
 	return 0
 
 //probably a bit iffy - will hopefully figure out a better solution

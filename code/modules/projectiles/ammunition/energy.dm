@@ -6,7 +6,20 @@
 	var/e_cost = 100 //The amount of energy a cell needs to expend to create this shot.
 	var/select_name = "energy"
 	fire_sound = 'sound/weapons/Laser.ogg'
-	firing_effect_type = /obj/effect/overlay/temp/dir_setting/firing_effect/energy
+	firing_effect_type = /obj/effect/temp_visual/dir_setting/firing_effect/energy
+
+/obj/item/ammo_casing/energy/chameleon
+	projectile_type = /obj/item/projectile/energy/chameleon
+	e_cost = 0
+	var/list/projectile_vars = list()
+
+/obj/item/ammo_casing/energy/chameleon/ready_proj()
+	. = ..()
+	if(!BB)
+		newshot()
+	for(var/V in projectile_vars)
+		if(BB.vars[V])
+			BB.vars[V] = projectile_vars[V]
 
 /obj/item/ammo_casing/energy/laser
 	projectile_type = /obj/item/projectile/beam/laser
@@ -64,6 +77,9 @@
 	select_name = "stun"
 	fire_sound = 'sound/weapons/taser.ogg'
 	e_cost = 200
+
+/obj/item/ammo_casing/energy/electrode/spec
+	e_cost = 100
 
 /obj/item/ammo_casing/energy/electrode/gun
 	fire_sound = 'sound/weapons/gunshot.ogg'
@@ -179,7 +195,7 @@
 	fire_sound = 'sound/magic/lightningbolt.ogg'
 	e_cost = 200
 	select_name = "stun"
-	projectile_type = /obj/item/projectile/energy/tesla_revolver
+	projectile_type = /obj/item/projectile/energy/tesla/revolver
 
 /obj/item/ammo_casing/energy/gravityrepulse
 	projectile_type = /obj/item/projectile/gravityrepulse

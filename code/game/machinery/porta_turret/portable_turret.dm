@@ -1,6 +1,9 @@
 #define TURRET_STUN 0
 #define TURRET_LETHAL 1
 
+#define POPUP_ANIM_TIME 5
+#define POPDOWN_ANIM_TIME 5 //Be sure to change the icon animation at the same time or it'll look bad
+
 /obj/machinery/porta_turret
 	name = "turret"
 	icon = 'icons/obj/turrets.dmi'
@@ -12,7 +15,7 @@
 	use_power = 1				//this turret uses and requires power
 	idle_power_usage = 50		//when inactive, this turret takes up constant 50 Equipment power
 	active_power_usage = 300	//when active, this turret takes up constant 300 Equipment power
-	req_access = list(access_security)
+	req_access = list(GLOB.access_security)
 	power_channel = EQUIP	//drains power from the EQUIPMENT channel
 
 	var/base_icon_state = "standard"
@@ -84,8 +87,9 @@
 	if(has_cover)
 		cover = new /obj/machinery/porta_turret_cover(loc)
 		cover.parent_turret = src
+		underlays += image('icons/obj/turrets.dmi',icon_state = "basedark")
 	if(!has_cover)
-		popUp()
+		INVOKE_ASYNC(src, .proc/popUp)
 
 /obj/machinery/porta_turret/update_icon()
 	cut_overlays()
@@ -189,7 +193,7 @@
 		if(anchored)	//you can't turn a turret on/off if it's not anchored/secured
 			on = !on	//toggle on/off
 		else
-			usr << "<span class='notice'>It has to be secured first!</span>"
+			to_chat(usr, "<span class='notice'>It has to be secured first!</span>")
 		interact(usr)
 		return
 
@@ -229,18 +233,18 @@
 		if(istype(I, /obj/item/weapon/crowbar))
 			//If the turret is destroyed, you can remove it with a crowbar to
 			//try and salvage its components
-			user << "<span class='notice'>You begin prying the metal coverings off...</span>"
+			to_chat(user, "<span class='notice'>You begin prying the metal coverings off...</span>")
 			if(do_after(user, 20*I.toolspeed, target = src))
 				if(prob(70))
 					if(stored_gun)
 						stored_gun.forceMove(loc)
-					user << "<span class='notice'>You remove the turret and salvage some components.</span>"
+					to_chat(user, "<span class='notice'>You remove the turret and salvage some components.</span>")
 					if(prob(50))
 						new /obj/item/stack/sheet/metal(loc, rand(1,4))
 					if(prob(50))
 						new /obj/item/device/assembly/prox_sensor(loc)
 				else
-					user << "<span class='notice'>You remove the turret but did not manage to salvage anything.</span>"
+					to_chat(user, "<span class='notice'>You remove the turret but did not manage to salvage anything.</span>")
 				qdel(src)
 
 	else if((istype(I, /obj/item/weapon/wrench)) && (!on))
@@ -252,13 +256,13 @@
 			anchored = 1
 			invisibility = INVISIBILITY_MAXIMUM
 			update_icon()
-			user << "<span class='notice'>You secure the exterior bolts on the turret.</span>"
+			to_chat(user, "<span class='notice'>You secure the exterior bolts on the turret.</span>")
 			if(has_cover)
 				cover = new /obj/machinery/porta_turret_cover(loc) //create a new turret. While this is handled in process(), this is to workaround a bug where the turret becomes invisible for a split second
 				cover.parent_turret = src //make the cover's parent src
 		else if(anchored)
 			anchored = 0
-			user << "<span class='notice'>You unsecure the exterior bolts on the turret.</span>"
+			to_chat(user, "<span class='notice'>You unsecure the exterior bolts on the turret.</span>")
 			update_icon()
 			invisibility = 0
 			qdel(cover) //deletes the cover, and the turret instance itself becomes its own cover.
@@ -267,19 +271,19 @@
 		//Behavior lock/unlock mangement
 		if(allowed(user))
 			locked = !locked
-			user << "<span class='notice'>Controls are now [locked ? "locked" : "unlocked"].</span>"
+			to_chat(user, "<span class='notice'>Controls are now [locked ? "locked" : "unlocked"].</span>")
 		else
-			user << "<span class='notice'>Access denied.</span>"
+			to_chat(user, "<span class='notice'>Access denied.</span>")
 	else if(istype(I,/obj/item/device/multitool) && !locked)
 		var/obj/item/device/multitool/M = I
 		M.buffer = src
-		user << "<span class='notice'>You add [src] to multitool buffer.</span>"
+		to_chat(user, "<span class='notice'>You add [src] to multitool buffer.</span>")
 	else
 		return ..()
 
 /obj/machinery/porta_turret/emag_act(mob/user)
 	if(!emagged)
-		user << "<span class='warning'>You short out [src]'s threat assessment circuits.</span>"
+		to_chat(user, "<span class='warning'>You short out [src]'s threat assessment circuits.</span>")
 		visible_message("[src] hums oddly...")
 		emagged = 1
 		controllock = 1
@@ -311,9 +315,11 @@
 		if(prob(30))
 			spark_system.start()
 		if(on && !attacked && !emagged)
-			attacked = 1
-			spawn(60)
-				attacked = 0
+			attacked = TRUE
+			addtimer(CALLBACK(src, .proc/reset_attacked), 60)
+
+/obj/machinery/porta_turret/proc/reset_attacked()
+	attacked = FALSE
 
 /obj/machinery/porta_turret/deconstruct(disassembled = TRUE)
 	qdel(src)
@@ -362,6 +368,10 @@
 	var/list/targets = list()
 	var/turretview = view(scan_range, base)
 	for(var/A in turretview)
+		var/atom/AA = A
+		if(AA.invisibility>SEE_INVISIBLE_LIVING)
+			continue
+
 		if(check_anomalies)//if it's set to check for simple animals
 			if(istype(A, /mob/living/simple_animal))
 				var/mob/living/simple_animal/SA = A
@@ -416,7 +426,7 @@
 	raising = 1
 	if(cover)
 		flick("popup", cover)
-	sleep(10)
+	sleep(POPUP_ANIM_TIME)
 	raising = 0
 	if(cover)
 		cover.icon_state = "openTurretCover"
@@ -432,7 +442,7 @@
 	raising = 1
 	if(cover)
 		flick("popdown", cover)
-	sleep(10)
+	sleep(POPDOWN_ANIM_TIME)
 	raising = 0
 	if(cover)
 		cover.icon_state = "turretCover"
@@ -465,7 +475,7 @@
 
 	if(check_records)	//if the turret can check the records, check if they are set to *Arrest* on records
 		var/perpname = perp.get_face_name(perp.get_id_name())
-		var/datum/data/record/R = find_record("name", perpname, data_core.security)
+		var/datum/data/record/R = find_record("name", perpname, GLOB.data_core.security)
 		if(!R || (R.fields["criminal"] == "*Arrest*"))
 			threatcount += 4
 
@@ -571,11 +581,9 @@
 
 /obj/machinery/porta_turret/aux_base
 	name = "perimeter defense turret"
-	desc = "A plasma cutter turret calibrated to defend outposts against non-humanoid fauna."
-
-	req_access = list() //Can be disabled/enabled by any humanoid!
+	desc = "A plasma beam turret calibrated to defend outposts against non-humanoid fauna. It is more effective when exposed to the environment."
 	installation = null
-	lethal_projectile = /obj/item/projectile/plasma
+	lethal_projectile = /obj/item/projectile/plasma/turret
 	lethal_projectile_sound = 'sound/weapons/plasma_cutter.ogg'
 	mode = TURRET_LETHAL //It would be useless in stun mode anyway
 	faction = "neutral" //Minebots, medibots, etc that should not be shot.
@@ -586,10 +594,37 @@
 /obj/machinery/porta_turret/aux_base/setup()
 	return
 
+/obj/machinery/porta_turret/aux_base/interact(mob/user) //Controlled solely from the base console.
+	return
+
 /obj/machinery/porta_turret/aux_base/New()
 	..()
 	cover.name = name
 	cover.desc = desc
+
+/obj/machinery/porta_turret/centcomm_shuttle
+	installation = null
+	obj_integrity = 260
+	max_integrity = 260
+	always_up = 1
+	use_power = 0
+	has_cover = 0
+	scan_range = 9
+	stun_projectile = /obj/item/projectile/beam/laser
+	lethal_projectile = /obj/item/projectile/beam/laser
+	lethal_projectile_sound = 'sound/weapons/plasma_cutter.ogg'
+	stun_projectile_sound = 'sound/weapons/plasma_cutter.ogg'
+	icon_state = "syndie_off"
+	base_icon_state = "syndie"
+	faction = "turret"
+	emp_vunerable = 0
+	mode = TURRET_LETHAL
+
+/obj/machinery/porta_turret/centcomm_shuttle/assess_perp(mob/living/carbon/human/perp)
+	return 0
+
+/obj/machinery/porta_turret/centcomm_shuttle/setup()
+	return
 
 ////////////////////////
 //Turret Control Panel//
@@ -607,7 +642,7 @@
 	var/locked = 1
 	var/control_area = null //can be area name, path or nothing.
 	var/ailock = 0 // AI cannot use this
-	req_access = list(access_ai_upload)
+	req_access = list(GLOB.access_ai_upload)
 	var/list/obj/machinery/porta_turret/turrets = list()
 	resistance_flags = INDESTRUCTIBLE | LAVA_PROOF | FIRE_PROOF | UNACIDABLE | ACID_PROOF
 
@@ -629,18 +664,14 @@
 	if(!mapload)
 		return
 	if(control_area && istext(control_area))
-		for(var/V in sortedAreas)
+		for(var/V in GLOB.sortedAreas)
 			var/area/A = V
 			if(A.name == control_area)
 				control_area = A
 				break
 
 	if(!control_area)
-		var/area/CA = get_area(src)
-		if(CA.master && CA.master != CA)
-			control_area = CA.master
-		else
-			control_area = CA
+		control_area = get_area(src)
 
 	for(var/obj/machinery/porta_turret/T in control_area)
 		turrets |= T
@@ -653,7 +684,7 @@
 		var/obj/item/device/multitool/M = I
 		if(M.buffer && istype(M.buffer,/obj/machinery/porta_turret))
 			turrets |= M.buffer
-			user << "You link \the [M.buffer] with \the [src]"
+			to_chat(user, "You link \the [M.buffer] with \the [src]")
 			return
 
 	if (issilicon(user))
@@ -662,11 +693,11 @@
 	if ( get_dist(src, user) == 0 )		// trying to unlock the interface
 		if (allowed(usr))
 			if(emagged)
-				user << "<span class='notice'>The turret control is unresponsive.</span>"
+				to_chat(user, "<span class='notice'>The turret control is unresponsive.</span>")
 				return
 
 			locked = !locked
-			user << "<span class='notice'>You [ locked ? "lock" : "unlock"] the panel.</span>"
+			to_chat(user, "<span class='notice'>You [ locked ? "lock" : "unlock"] the panel.</span>")
 			if (locked)
 				if (user.machine==src)
 					user.unset_machine()
@@ -675,11 +706,11 @@
 				if (user.machine==src)
 					src.attack_hand(user)
 		else
-			user << "<span class='warning'>Access denied.</span>"
+			to_chat(user, "<span class='warning'>Access denied.</span>")
 
 /obj/machinery/turretid/emag_act(mob/user)
 	if(!emagged)
-		user << "<span class='danger'>You short out the turret controls' access analysis module.</span>"
+		to_chat(user, "<span class='danger'>You short out the turret controls' access analysis module.</span>")
 		emagged = 1
 		locked = 0
 		if(user && user.machine == src)
@@ -689,12 +720,12 @@
 	if(!ailock || IsAdminGhost(user))
 		return attack_hand(user)
 	else
-		user << "<span class='notice'>There seems to be a firewall preventing you from accessing this device.</span>"
+		to_chat(user, "<span class='notice'>There seems to be a firewall preventing you from accessing this device.</span>")
 
 /obj/machinery/turretid/attack_hand(mob/user as mob)
 	if ( get_dist(src, user) > 0 )
 		if ( !(issilicon(user) || IsAdminGhost(user)) )
-			user << "<span class='notice'>You are too far away.</span>"
+			to_chat(user, "<span class='notice'>You are too far away.</span>")
 			user.unset_machine()
 			user << browse(null, "window=turretid")
 			return
@@ -721,7 +752,7 @@
 		return
 	if (locked)
 		if(!(issilicon(usr) || IsAdminGhost(usr)))
-			usr << "Control panel is locked!"
+			to_chat(usr, "Control panel is locked!")
 			return
 	if (href_list["toggleOn"])
 		toggle_on()
@@ -761,8 +792,7 @@
 /obj/item/wallframe/turret_control
 	name = "turret control frame"
 	desc = "Used for building turret control panels"
-	icon = 'icons/obj/apc_repair.dmi'
-	icon_state = "apc_frame"
+	icon_state = "apc"
 	result_path = /obj/machinery/turretid
 	materials = list(MAT_METAL=MINERAL_MATERIAL_AMOUNT)
 
@@ -822,7 +852,7 @@
 	. = ..()
 
 /obj/machinery/porta_turret/lasertag
-	req_access = list(access_maint_tunnels, access_theatre)
+	req_access = list(GLOB.access_maint_tunnels, GLOB.access_theatre)
 	check_records = 0
 	criminals = 0
 	auth_weapons = 1
@@ -891,3 +921,170 @@
 				on = 0
 				spawn(100)
 					on = 1
+
+/////// MANNED TURRET ////////
+
+/obj/machinery/manned_turret
+	name = "machine gun turret"
+	desc = "While the trigger is held down, this gun will redistribute recoil to allow its user to easily shift targets."
+	icon = 'icons/obj/turrets.dmi'
+	icon_state = "machinegun"
+	can_buckle = TRUE
+	density = TRUE
+	max_integrity = 100
+	obj_integrity = 100
+	buckle_lying = 0
+	layer = ABOVE_MOB_LAYER
+	var/view_range = 10
+	var/cooldown = 0
+	var/projectile_type = /obj/item/projectile/bullet/weakbullet3
+	var/rate_of_fire = 1
+	var/number_of_shots = 40
+	var/cooldown_duration = 90
+	var/atom/target
+	var/turf/target_turf
+	var/warned = FALSE
+
+//BUCKLE HOOKS
+
+/obj/machinery/manned_turret/unbuckle_mob(mob/living/buckled_mob,force = 0)
+	playsound(src,'sound/mecha/mechmove01.ogg', 50, 1)
+	for(var/obj/item/I in buckled_mob.held_items)
+		if(istype(I, /obj/item/gun_control))
+			qdel(I)
+	if(istype(buckled_mob))
+		buckled_mob.pixel_x = 0
+		buckled_mob.pixel_y = 0
+		if(buckled_mob.client)
+			buckled_mob.client.change_view(world.view)
+	anchored = FALSE
+	. = ..()
+
+/obj/machinery/manned_turret/user_buckle_mob(mob/living/M, mob/living/carbon/user)
+	if(user.incapacitated() || !istype(user))
+		return
+	M.forceMove(get_turf(src))
+	..()
+	for(var/V in M.held_items)
+		var/obj/item/I = V
+		if(istype(I))
+			if(M.dropItemToGround(I))
+				var/obj/item/gun_control/TC = new /obj/item/gun_control(src)
+				M.put_in_hands(TC)
+		else	//Entries in the list should only ever be items or null, so if it's not an item, we can assume it's an empty hand
+			var/obj/item/gun_control/TC = new /obj/item/gun_control(src)
+			M.put_in_hands(TC)
+	M.pixel_y = 14
+	layer = ABOVE_MOB_LAYER
+	setDir(SOUTH)
+	playsound(src,'sound/mecha/mechmove01.ogg', 50, 1)
+	anchored = TRUE
+	if(user.client)
+		user.client.change_view(view_range)
+
+/obj/item/gun_control
+	name = "turret controls"
+	icon = 'icons/obj/weapons.dmi'
+	icon_state = "offhand"
+	w_class = WEIGHT_CLASS_HUGE
+	flags = ABSTRACT | NODROP
+	resistance_flags = FIRE_PROOF | UNACIDABLE | ACID_PROOF | NOBLUDGEON
+	var/obj/machinery/manned_turret/turret
+
+/obj/item/gun_control/New(obj/machinery/manned_turret/MT)
+	if(MT)
+		turret = MT
+	else
+		qdel(src)
+
+/obj/item/gun_control/CanItemAutoclick()
+	return 1
+
+/obj/item/gun_control/afterattack(atom/targeted_atom, mob/user)
+	..()
+	var/obj/machinery/manned_turret/E = user.buckled
+	E.setDir(get_dir(E,targeted_atom))
+	user.setDir(E.dir)
+	switch(E.dir)
+		if(NORTH)
+			E.layer = BELOW_MOB_LAYER
+			user.pixel_x = 0
+			user.pixel_y = -14
+		if(NORTHEAST)
+			E.layer = BELOW_MOB_LAYER
+			user.pixel_x = -8
+			user.pixel_y = -4
+		if(EAST)
+			E.layer = ABOVE_MOB_LAYER
+			user.pixel_x = -14
+			user.pixel_y = 0
+		if(SOUTHEAST)
+			E.layer = BELOW_MOB_LAYER
+			user.pixel_x = -8
+			user.pixel_y = 4
+		if(SOUTH)
+			E.layer = ABOVE_MOB_LAYER
+			user.pixel_x = 0
+			user.pixel_y = 14
+		if(SOUTHWEST)
+			E.layer = BELOW_MOB_LAYER
+			user.pixel_x = 8
+			user.pixel_y = 4
+		if(WEST)
+			E.layer = ABOVE_MOB_LAYER
+			user.pixel_x = 14
+			user.pixel_y = 0
+		if(NORTHWEST)
+			E.layer = BELOW_MOB_LAYER
+			user.pixel_x = 8
+			user.pixel_y = -4
+	E.checkfire(targeted_atom, user)
+
+/obj/machinery/manned_turret/proc/checkfire(atom/targeted_atom, mob/user)
+	target = targeted_atom
+	if(target == user || target == get_turf(src))
+		return
+	if(world.time < cooldown)
+		if(!warned && world.time > (cooldown - cooldown_duration + rate_of_fire*number_of_shots)) // To capture the window where one is done firing
+			warned = TRUE
+			playsound(src, 'sound/weapons/sear.ogg', 100, 1)
+		return
+	else
+		cooldown = world.time + cooldown_duration
+		warned = FALSE
+		INVOKE_ASYNC(src, /obj/machinery/manned_turret/.proc/volley)
+
+/obj/machinery/manned_turret/proc/volley()
+	target_turf = get_turf(target)
+	for(var/i in 1 to number_of_shots)
+		addtimer(CALLBACK(src, /obj/machinery/manned_turret/.proc/fire_helper), i*rate_of_fire)
+
+
+/obj/machinery/manned_turret/proc/fire_helper()
+	if(!src)
+		return
+	var/turf/targets_from = get_turf(src)
+	if(QDELETED(target))
+		target = target_turf
+	var/obj/item/projectile/P = new projectile_type(targets_from)
+	P.current = targets_from
+	P.starting = targets_from
+	P.firer = src
+	P.original = target
+	playsound(src, 'sound/weapons/Gunshot_smg.ogg', 75, 1)
+	P.yo = target.y - targets_from.y + rand(-1,1)
+	P.xo = target.x - targets_from.x + rand(-1,1)
+	P.fire()
+
+/obj/machinery/manned_turret/ultimate  // Admin-only proof of concept for autoclicker automatics
+	name = "Infinity Gun"
+	view_range = 12
+	projectile_type = /obj/item/projectile/bullet/weakbullet3
+
+
+/obj/machinery/manned_turret/ultimate/checkfire(atom/targeted_atom, mob/user)
+	target = targeted_atom
+	if(target == user || target == get_turf(src))
+		return
+	target_turf = get_turf(target)
+	fire_helper(target_turf)

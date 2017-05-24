@@ -8,7 +8,7 @@
 	icon_living = "flan"
 	icon_dead = "flan_dead"
 	turns_per_move = 5
-	environment_smash = 0
+	environment_smash = ENVIRONMENT_SMASH_NONE
 	speed = -2
 	maxHealth = 50
 	health = 50
@@ -34,7 +34,7 @@
 	var/spelldamage = 15
 	var/spellcasttime = 15							//if you varedit this also varedit ranged_cooldown_time else the mob will attack again before the spell hits, looking weird but still working
 
-/mob/living/simple_animal/hostile/flan/New()		//Required for the inheritance of casting animations.
+/mob/living/simple_animal/hostile/flan/Initialize()		//Required for the inheritance of casting animations.
 	..()
 	casting = 0
 	icon_state = "[initial(icon_state)][casting]"

@@ -53,17 +53,17 @@
 			return
 
 		if (dug)
-			user << "<span class='warning'>This area has already been dug!</span>"
+			to_chat(user, "<span class='warning'>This area has already been dug!</span>")
 			return
 
-		user << "<span class='notice'>You start digging...</span>"
+		to_chat(user, "<span class='notice'>You start digging...</span>")
 		playsound(src, 'sound/effects/shovel_dig.ogg', 50, 1)
 
 		if(do_after(user, digging_speed, target = src))
 			if(istype(src, /turf/open/floor/plating/asteroid))
-				user << "<span class='notice'>You dig a hole.</span>"
+				to_chat(user, "<span class='notice'>You dig a hole.</span>")
 				gets_dug()
-				feedback_add_details("pick_used_mining","[W.type]")
+				SSblackbox.add_details("pick_used_mining","[W.type]")
 
 	if(istype(W,/obj/item/weapon/storage/bag/ore))
 		var/obj/item/weapon/storage/bag/ore/S = W
@@ -119,13 +119,18 @@
 
 /turf/open/floor/plating/asteroid/basalt/Initialize()
 	..()
-	switch(icon_state)
-		if("basalt1", "basalt2", "basalt3") //5 and 9 are too dark to glow and make the amount of glows in tunnels too high
-			SetLuminosity(1, 1) //this is basically a 3.75% chance that a basalt floor glows
+	set_basalt_light(src)
+
+/proc/set_basalt_light(turf/open/floor/B)
+	switch(B.icon_state)
+		if("basalt1", "basalt2", "basalt3")
+			B.set_light(2, 0.6, LIGHT_COLOR_LAVA) //more light
+		if("basalt5", "basalt9")
+			B.set_light(1.4, 0.6, LIGHT_COLOR_LAVA) //barely anything!
 
 /turf/open/floor/plating/asteroid/basalt/gets_dug()
 	if(!dug)
-		SetLuminosity(0)
+		set_light(0)
 	..()
 
 
@@ -197,7 +202,7 @@
 		length = set_length
 
 	// Get our directiosn
-	forward_cave_dir = pick(alldirs - exclude_dir)
+	forward_cave_dir = pick(GLOB.alldirs - exclude_dir)
 	// Get the opposite direction of our facing direction
 	backward_cave_dir = angle2dir(dir2angle(forward_cave_dir) + 180)
 
@@ -267,15 +272,18 @@
 
 /turf/open/floor/plating/asteroid/airless/cave/proc/SpawnMonster(turf/T)
 	if(prob(30))
-		if(istype(loc, /area/mine/explored) || istype(loc, /area/lavaland/surface/outdoors/explored))
+		if(istype(loc, /area/mine/explored) || !istype(loc, /area/lavaland/surface/outdoors/unexplored))
 			return
 		var/randumb = pickweight(mob_spawn_list)
 		while(randumb == SPAWN_MEGAFAUNA)
-			var/maybe_boss = pickweight(megafauna_spawn_list)
-			if(megafauna_spawn_list[maybe_boss])
-				randumb = maybe_boss
-				if(ispath(maybe_boss, /mob/living/simple_animal/hostile/megafauna/bubblegum)) //there can be only one bubblegum, so don't waste spawns on it
-					megafauna_spawn_list[maybe_boss] = 0
+			if(istype(loc, /area/lavaland/surface/outdoors/unexplored/danger)) //this is danger. it's boss time.
+				var/maybe_boss = pickweight(megafauna_spawn_list)
+				if(megafauna_spawn_list[maybe_boss])
+					randumb = maybe_boss
+					if(ispath(maybe_boss, /mob/living/simple_animal/hostile/megafauna/bubblegum)) //there can be only one bubblegum, so don't waste spawns on it
+						megafauna_spawn_list[maybe_boss] = 0
+			else //this is not danger, don't spawn a boss, spawn something else
+				randumb = pickweight(mob_spawn_list)
 
 		for(var/mob/living/simple_animal/hostile/H in urange(12,T)) //prevents mob clumps
 			if((ispath(randumb, /mob/living/simple_animal/hostile/megafauna) || ismegafauna(H)) && get_dist(src, H) <= 7)
@@ -323,6 +331,3 @@
 
 /turf/open/floor/plating/asteroid/snow/atmosphere
 	initial_gas_mix = "o2=22;n2=82;TEMP=180"
-
-
-

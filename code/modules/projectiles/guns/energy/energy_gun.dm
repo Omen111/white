@@ -31,6 +31,11 @@
 	if(gun_light && gun_light.on)
 		add_overlay("mini-light")
 
+/obj/item/weapon/gun/energy/e_gun/stun
+	name = "tactical energy gun"
+	desc = "Military issue energy gun, is able to fire stun rounds."
+	ammo_type = list(/obj/item/ammo_casing/energy/electrode/spec, /obj/item/ammo_casing/energy/disabler, /obj/item/ammo_casing/energy/laser)
+
 /obj/item/weapon/gun/energy/e_gun/mini/practice_phaser
 	name = "practice phaser"
 	desc = "A modified version of the basic phaser gun, this one fires less concentrated energy bolts designed for target practice."
@@ -106,12 +111,12 @@
 			if(0 to 200)
 				fail_tick += (2*(fail_chance))
 				M.rad_act(40)
-				M << "<span class='userdanger'>Your [name] feels warmer.</span>"
+				to_chat(M, "<span class='userdanger'>Your [name] feels warmer.</span>")
 			if(201 to INFINITY)
 				SSobj.processing.Remove(src)
 				M.rad_act(80)
 				crit_fail = 1
-				M << "<span class='userdanger'>Your [name]'s reactor overloads!</span>"
+				to_chat(M, "<span class='userdanger'>Your [name]'s reactor overloads!</span>")
 
 /obj/item/weapon/gun/energy/e_gun/nuclear/emp_act(severity)
 	..()

@@ -12,20 +12,20 @@
 /obj/item/clockwork/component/pickup(mob/living/user)
 	..()
 	if(iscultist(user) || (user.mind && user.mind.isholy))
-		user << "<span class='[message_span]'>[cultist_message]</span>"
+		to_chat(user, "<span class='[message_span]'>[cultist_message]</span>")
 		if(user.mind && user.mind.isholy)
-			user << "<span class='boldannounce'>The power of your faith melts away the [src]!</span>"
+			to_chat(user, "<span class='boldannounce'>The power of your faith melts away the [src]!</span>")
 			var/obj/item/weapon/ore/slag/wrath = new /obj/item/weapon/ore/slag
 			qdel(src)
 			user.put_in_active_hand(wrath)
 	if(is_servant_of_ratvar(user) && prob(20))
 		var/pickedmessage = pick(servant_of_ratvar_messages)
-		user << "<span class='[message_span]'>[servant_of_ratvar_messages[pickedmessage] ? "[text2ratvar(pickedmessage)]" : pickedmessage]</span>"
+		to_chat(user, "<span class='[message_span]'>[servant_of_ratvar_messages[pickedmessage] ? "[text2ratvar(pickedmessage)]" : pickedmessage]</span>")
 
 /obj/item/clockwork/component/examine(mob/user)
 	..()
 	if(is_servant_of_ratvar(user))
-		user << "<span class='[message_span]'>You should put this in a slab or cache immediately.</span>"
+		to_chat(user, "<span class='[message_span]'>You should put this in a slab or cache immediately.</span>")
 
 /obj/item/clockwork/component/belligerent_eye
 	name = "belligerent eye"
@@ -53,6 +53,9 @@
 	cultist_message = "The gem turns black and cold for a moment before its normal glow returns."
 	servant_of_ratvar_messages = list("\"Disgusting failure.\"" = TRUE, "You feel scrutinized." = FALSE, "\"Weaklings.\"" = TRUE, "\"Pathetic defenses.\"" = TRUE)
 	w_class = WEIGHT_CLASS_TINY
+	light_range = 1.4
+	light_power = 0.4
+	light_color = "#F42B9D"
 
 /obj/item/clockwork/component/vanguard_cogwheel
 	name = "vanguard cogwheel"
@@ -159,14 +162,15 @@
 	resistance_flags = LAVA_PROOF | FIRE_PROOF | ACID_PROOF
 	var/randomsinglesprite = FALSE
 	var/randomspritemax = 2
+	var/sprite_shift = 9
 
-/obj/item/clockwork/alloy_shards/New()
-	..()
+/obj/item/clockwork/alloy_shards/Initialize()
+	. = ..()
 	if(randomsinglesprite)
 		replace_name_desc()
 		icon_state = "[icon_state][rand(1, randomspritemax)]"
-		pixel_x = rand(-9, 9)
-		pixel_y = rand(-9, 9)
+		pixel_x = rand(-sprite_shift, sprite_shift)
+		pixel_y = rand(-sprite_shift, sprite_shift)
 
 /obj/item/clockwork/alloy_shards/proc/replace_name_desc()
 	name = "replicant alloy shard"
@@ -174,16 +178,21 @@
 	clockwork_desc = "A broken shard of replicant alloy. Can be proselytized for additional power."
 
 /obj/item/clockwork/alloy_shards/large
+	w_class = WEIGHT_CLASS_TINY
 	randomsinglesprite = TRUE
 	icon_state = "shard_large"
+	sprite_shift = 9
 
 /obj/item/clockwork/alloy_shards/medium
+	w_class = WEIGHT_CLASS_TINY
 	randomsinglesprite = TRUE
 	icon_state = "shard_medium"
+	sprite_shift = 10
 
 /obj/item/clockwork/alloy_shards/medium/gear_bit
 	randomspritemax = 4
 	icon_state = "gear_bit"
+	sprite_shift = 12
 
 /obj/item/clockwork/alloy_shards/medium/gear_bit/replace_name_desc()
 	name = "gear bit"
@@ -197,9 +206,11 @@
 	name = "complex gear bit"
 
 /obj/item/clockwork/alloy_shards/small
+	w_class = WEIGHT_CLASS_TINY
 	randomsinglesprite = TRUE
 	randomspritemax = 3
 	icon_state = "shard_small"
+	sprite_shift = 12
 
 /obj/item/clockwork/alloy_shards/pinion_lock
 	name = "pinion lock"

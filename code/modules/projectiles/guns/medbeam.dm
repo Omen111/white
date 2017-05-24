@@ -55,7 +55,7 @@
 	current_beam = new(user,current_target,time=6000,beam_icon_state="medbeam",btype=/obj/effect/ebeam/medical)
 	INVOKE_ASYNC(current_beam, /datum/beam.proc/Start)
 
-	feedback_add_details("gun_fired","[src.type]")
+	SSblackbox.add_details("gun_fired","[src.type]")
 
 /obj/item/weapon/gun/medbeam/process()
 
@@ -76,7 +76,7 @@
 	if(get_dist(source, current_target)>max_range || !los_check(source, current_target))
 		LoseTarget()
 		if(isliving(source))
-			source << "<span class='warning'>You lose control of the beam!</span>"
+			to_chat(source, "<span class='warning'>You lose control of the beam!</span>")
 		return
 
 	if(current_target)
@@ -113,7 +113,7 @@
 
 /obj/item/weapon/gun/medbeam/proc/on_beam_tick(var/mob/living/target)
 	if(target.health != target.maxHealth)
-		new /obj/effect/overlay/temp/heal(get_turf(target), "#80F5FF")
+		new /obj/effect/temp_visual/heal(get_turf(target), "#80F5FF")
 	target.adjustBruteLoss(-4)
 	target.adjustFireLoss(-4)
 	return

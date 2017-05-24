@@ -10,6 +10,7 @@
 	origin_tech = "materials=1;biotech=2"
 	materials = list(MAT_GLASS=500)
 	var/obj/item/weapon/implant/imp = null
+	var/imp_type
 
 
 /obj/item/weapon/implantcase/update_icon()
@@ -25,7 +26,7 @@
 
 /obj/item/weapon/implantcase/attackby(obj/item/weapon/W, mob/user, params)
 	if(istype(W, /obj/item/weapon/pen))
-		var/t = sanitize_russian(stripped_input(user, "What would you like the label to be?", name, null))
+		var/t = stripped_input(user, "What would you like the label to be?", name, null)
 		if(user.get_active_held_item() != W)
 			return
 		if(!in_range(src, user) && loc != user)
@@ -57,32 +58,24 @@
 	else
 		return ..()
 
-/obj/item/weapon/implantcase/New()
+/obj/item/weapon/implantcase/Initialize(mapload)
 	..()
+	if(imp_type)
+		imp = new imp_type(src)
 	update_icon()
 
 
 /obj/item/weapon/implantcase/tracking
 	name = "implant case - 'Tracking'"
 	desc = "A glass case containing a tracking implant."
-
-/obj/item/weapon/implantcase/tracking/New()
-	imp = new /obj/item/weapon/implant/tracking(src)
-	..()
-
+	imp_type = /obj/item/weapon/implant/tracking
 
 /obj/item/weapon/implantcase/weapons_auth
 	name = "implant case - 'Firearms Authentication'"
 	desc = "A glass case containing a firearms authentication implant."
-
-/obj/item/weapon/implantcase/weapons_auth/New()
-	imp = new /obj/item/weapon/implant/weapons_auth(src)
-	..()
+	imp_type = /obj/item/weapon/implant/weapons_auth
 
 /obj/item/weapon/implantcase/adrenaline
 	name = "implant case - 'Adrenaline'"
 	desc = "A glass case containing an adrenaline implant."
-
-/obj/item/weapon/implantcase/adrenaline/New()
-	imp = new /obj/item/weapon/implant/adrenalin(src)
-	..()
+	imp_type = /obj/item/weapon/implant/adrenalin
